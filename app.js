@@ -25,7 +25,7 @@ app.post("/participants", (req, res) => {
         typeof req.body.shiftIndex !== "undefined" &&
         typeof req.body.name !== "undefined") {
 
-        const dayParticipants = db.get(req.body.dayDateTime) || [[], [], [], [], [], [], [], []]
+        const dayParticipants = db.get(req.body.dayDateTime) || [[], [], [], [], [], [], [], [], []]
         dayParticipants[req.body.shiftIndex].push(req.body.name);
         db.set(req.body.dayDateTime, dayParticipants);
 
@@ -63,7 +63,7 @@ function getParticipantsArray() {
         const dayDateTime = getCurrentDayDate().getTime() + i * 86400000
         participantsArray.push({
             dayDateTime,
-            participants: db.get(dayDateTime) || [[], [], [], [], [], [], [], []]
+            participants: db.get(dayDateTime) || [[], [], [], [], [], [], [], [], []]
         })
     }
 
