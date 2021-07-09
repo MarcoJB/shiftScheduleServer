@@ -50,17 +50,15 @@ app.listen(port, () => {
     console.log(`Shift schedule server listening on port ${port}`)
 })
 
-function getCurrentDayDate() {
-    const currentDayDate = new Date()
-    currentDayDate.setHours(0, 0, 0, 0)
-    return currentDayDate;
+function getCurrentDayTimestamp() {
+    return Math.floor(Date.now() / 86400000) * 86400000
 }
 
 function getParticipantsArray() {
     const participantsArray = []
 
     for (i = -1; i < 10; i++) {
-        const dayDateTime = getCurrentDayDate().getTime() + i * 86400000
+        const dayDateTime = getCurrentDayTimestamp() + i * 86400000
         participantsArray.push({
             dayDateTime,
             participants: db.get(dayDateTime) || [[], [], [], [], [], [], [], [], []]
