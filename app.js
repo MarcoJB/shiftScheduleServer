@@ -33,6 +33,13 @@ wss.on('connection', function connection(ws) {
         } catch (e) { }
     })
 
+    ws.addEventListener('close', function close() {
+        const index = clients.indexOf(ws)
+        if (index !== -1) {
+            clients.splice(index, 1)
+        }
+    })
+
     ws.send(JSON.stringify({type: "LIST", participants: getParticipantsArray()}))
 });
 
