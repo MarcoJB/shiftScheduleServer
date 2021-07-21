@@ -1,54 +1,67 @@
-const express = require('express')
-const bodyParser = require('body-parser');
 const JSONdb = require('simple-json-db');
+const WebSocket = require('ws');
 
 const db = new JSONdb('database/participants.json');
 
 const port = 3000
 
-const app = express()
-app.use(function(req, res, next) {
-    res.header("Access-Control-Allow-Origin", "*");
-    res.header("Access-Control-Allow-Methods", "GET,HEAD,POST,DELETE");
-    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
-    next();
+
+
+const wss = new WebSocket.Server({port});
+const clients = []
+
+wss.on('connection', function connection(ws) {
+    clients.push(ws)
+
+    ws.on('message', function incoming(data) {
+        try {
+            const message = JSON.parse(data)
+            switch (message.type) {
+                case "ADD":
+                    addParticipant(message.dayDateTime, message.shiftIndex, message.name)
+                    clients.forEach(client => {
+                        if (client !== ws) client.send(JSON.stringify({type: "ADD", ...message}))
+                    })
+                    break;
+                case "DELETE":
+                    deleteParticipant(message.dayDateTime, message.shiftIndex, message.name)
+                    clients.forEach(client => {
+                        if (client !== ws) client.send(JSON.stringify({type: "DELETE", ...message}))
+                    })
+                    break;
+            }
+        } catch (e) { }
+    })
+
+    ws.send(JSON.stringify({type: "LIST", participants: getParticipantsArray()}))
 });
-app.use(bodyParser.urlencoded({extended: true}));
-app.use(bodyParser.json());
 
-app.get('/participants', (req, res) => {
-    res.send(getParticipantsArray())
-})
+function addParticipant(dayDateTime, shiftIndex, name) {
+    if (typeof dayDateTime !== "undefined" &&
+        typeof shiftIndex !== "undefined" &&
+        typeof name !== "undefined") {
 
-app.post("/participants", (req, res) => {
-    if (typeof req.body.dayDateTime !== "undefined" &&
-        typeof req.body.shiftIndex !== "undefined" &&
-        typeof req.body.name !== "undefined") {
-
-        const dayParticipants = db.get(req.body.dayDateTime) || [[], [], [], [], [], [], [], [], []]
-        dayParticipants[req.body.shiftIndex].push(req.body.name);
-        db.set(req.body.dayDateTime, dayParticipants);
-
+        const dayParticipants = db.get(dayDateTime) || [[], [], [], [], [], [], [], [], []]
+        dayParticipants[shiftIndex].push(name);
+        db.set(dayDateTime, dayParticipants);
     }
+}
 
-    res.send(getParticipantsArray())
-})
+function deleteParticipant(dayDateTime, shiftIndex, name) {
+    if (typeof dayDateTime !== "undefined" &&
+        typeof shiftIndex !== "undefined" &&
+        typeof name !== "undefined") {
 
-app.delete("/participants/:dayDateTime/:shiftIndex/:name", (req, res) => {
-    const dayParticipants = db.get(req.params.dayDateTime)
-    if (dayParticipants !== undefined) {
-        const index = dayParticipants[req.params.shiftIndex].indexOf(req.params.name);
-        if (index !== -1) {
-            dayParticipants[req.params.shiftIndex].splice(index, 1);
-            db.set(req.params.dayDateTime, dayParticipants)
+        const dayParticipants = db.get(dayDateTime)
+        if (dayParticipants !== undefined) {
+            const index = dayParticipants[shiftIndex].indexOf(name);
+            if (index !== -1) {
+                dayParticipants[shiftIndex].splice(index, 1);
+                db.set(dayDateTime, dayParticipants)
+            }
         }
     }
-    res.send(getParticipantsArray())
-})
-
-app.listen(port, () => {
-    console.log(`Shift schedule server listening on port ${port}`)
-})
+}
 
 function getCurrentDayTimestamp() {
     return Math.floor(Date.now() / 86400000) * 86400000
